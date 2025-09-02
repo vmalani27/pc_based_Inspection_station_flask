@@ -7,6 +7,7 @@ from csv_helper import read_csv, write_csv, append_csv, csv_to_dict
 import datetime
 import csv
 import time
+from sessions import create_user_session, get_user_session, complete_user_session, cleanup_expired_sessions
 
 
 logging.basicConfig(level=logging.INFO)
@@ -258,43 +259,100 @@ def should_calibrate_endpoint(roll_number: str):
 
 @app.post("/user_entry")
 def add_user_entry(entry: dict = Body(...)):
+    """Create user session instead of immediate commit"""
     logging.info(f"Received entry: {entry}")
-    ensure_user_entry_csv_exists()
-
+    cleanup_expired_sessions()  # Clean up old sessions
+    
     for field in ["roll_number", "name"]:
         if field not in entry:
             logging.error(f"Missing field: {field}")
             raise HTTPException(status_code=400, detail=f"Missing field: {field}")
 
+    # Check if user exists and determine calibration requirement
+    ensure_user_entry_csv_exists()
+    should_calibrate_flag = should_calibrate_helper(entry["roll_number"])
+    
+    # Create session instead of immediate commit
+    session = create_user_session(
+        roll_number=entry["roll_number"], 
+        name=entry["name"], 
+        should_calibrate=should_calibrate_flag
+    )
+    
+    logging.info(f"Created session {session.session_id} for user {entry['roll_number']}")
+    
+    # Check if returning user
     existing_entries = read_csv(get_user_entry_path())
-    logging.info(f"Existing entries: {existing_entries}")
-
-    for row in existing_entries:
-        if row["roll_number"] == entry["roll_number"]:
-            logging.info(f"Found existing user: {row['roll_number']}")
-
-            # Get calibration flag BEFORE updating last_login
-            should_calibrate_flag = should_calibrate_helper(entry["roll_number"])
-
-            # Now update last_login
-            row["last_login"] = datetime.datetime.now().isoformat()
-            write_csv(get_user_entry_path(), existing_entries, USER_ENTRY_FIELDS)
-            logging.info(f"Updated last_login for user {row['roll_number']}")
-
-            return {"status": "welcome_back", "should_calibrate": should_calibrate_flag}
-
-    # New user
-    now = datetime.datetime.now().isoformat()
-    new_entry = {
-        "roll_number": entry["roll_number"],
-        "name": entry["name"],
-        "date": entry.get("date", now[:10]),
-        "time": entry.get("time", now[11:19]),
-        "last_login": now
+    is_returning_user = any(row["roll_number"] == entry["roll_number"] for row in existing_entries)
+    
+    return {
+        "session_id": session.session_id,
+        "status": "welcome_back" if is_returning_user else "new_user",
+        "should_calibrate": should_calibrate_flag,
+        "message": "Session created. Complete calibration to finalize entry."
     }
-    append_csv(get_user_entry_path(), [new_entry], USER_ENTRY_FIELDS)
-    logging.info(f"Added new user: {new_entry}")
-    return {"status": "entry added", "should_calibrate": True}
+
+@app.post("/user_entry/complete_calibration")
+def complete_calibration(data: dict = Body(...)):
+    """Complete calibration and commit user session to permanent records"""
+    if "session_id" not in data:
+        raise HTTPException(status_code=400, detail="Missing session_id")
+    
+    session = get_user_session(data["session_id"])
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+    
+    if session.status == "calibrated":
+        return {"status": "already_completed", "message": "Calibration already completed"}
+    
+    # Commit session to permanent records
+    ensure_user_entry_csv_exists()
+    existing_entries = read_csv(get_user_entry_path())
+    
+    # Check if user already exists
+    user_exists = False
+    for row in existing_entries:
+        if row["roll_number"] == session.roll_number:
+            # Update last_login for existing user
+            row["last_login"] = datetime.datetime.now().isoformat()
+            user_exists = True
+            break
+    
+    if not user_exists:
+        # Add new user
+        now = datetime.datetime.now().isoformat()
+        new_entry = {
+            "roll_number": session.roll_number,
+            "name": session.name,
+            "date": now[:10],
+            "time": now[11:19],
+            "last_login": now
+        }
+        existing_entries.append(new_entry)
+    
+    # Save to file
+    write_csv(get_user_entry_path(), existing_entries, USER_ENTRY_FIELDS)
+    
+    # Mark session as complete
+    complete_user_session(data["session_id"])
+    
+    logging.info(f"Completed calibration for user {session.roll_number}")
+    
+    return {
+        "status": "calibration_completed",
+        "roll_number": session.roll_number,
+        "name": session.name,
+        "message": "User entry finalized successfully"
+    }
+
+@app.get("/user_entry/session/{session_id}")
+def get_session_status(session_id: str):
+    """Get session status"""
+    session = get_user_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found or expired")
+    
+    return session.to_dict()
 
 @app.put("/user_entry")
 def update_user_entry(entry: dict = Body(...)):
@@ -341,8 +399,8 @@ def ensure_user_entry_csv_exists():
         write_csv(path, [], ["roll_number", "name", "date", "time", "last_login"])
 
 # Shaft measurement fields and CSV path
-SHAFT_MEASUREMENT_FIELDS = ["product_id", "roll_number", "shaft_height", "shaft_radius"]
-HOUSING_MEASUREMENT_FIELDS = ["product_id", "roll_number", "housing_type", "housing_height", "housing_radius", "housing_depth"]
+SHAFT_MEASUREMENT_FIELDS = ["product_id", "roll_number", "shaft_height", "shaft_radius", "timestamp"]
+HOUSING_MEASUREMENT_FIELDS = ["product_id", "roll_number", "housing_type", "housing_height", "housing_radius", "housing_depth", "timestamp"]
 
 
 def get_measured_shafts_path():
@@ -440,18 +498,31 @@ def product_exists_endpoint(product_id: str, measurement_type: str):
 def add_shaft_measurement(entry: dict = Body(...)):
     """
     Add a new shaft measurement. Expects a JSON body with product_id, roll_number, shaft_height, shaft_radius.
+    Timestamp is automatically added.
     """
     ensure_measured_shafts_csv_exists()
-    for field in SHAFT_MEASUREMENT_FIELDS:
+    required_fields = ["product_id", "roll_number", "shaft_height", "shaft_radius"]
+    
+    for field in required_fields:
         if field not in entry:
             raise HTTPException(status_code=400, detail=f"Missing field: {field}")
+    
     # Enforce unique product_id per shaft dataset
     pid = str(entry.get('product_id')).strip()
     if product_id_exists(pid, 'shaft'):
         raise HTTPException(status_code=409, detail="product_id already exists for shaft measurements")
+    
+    # Add timestamp to entry
+    entry["timestamp"] = datetime.datetime.now().isoformat()
+    
     from csv_helper import append_csv
     append_csv(get_measured_shafts_path(), [entry], SHAFT_MEASUREMENT_FIELDS)
-    return {"status": "shaft measurement added", "product_id": pid}
+    
+    return {
+        "status": "shaft measurement added", 
+        "product_id": pid,
+        "timestamp": entry["timestamp"]
+    }
 
 # Housing measurement endpoint
 @app.post("/housing_measurement")
@@ -459,6 +530,7 @@ def add_housing_measurement(entry: dict = Body(...)):
     """
     Add a new housing measurement. Expects a JSON body with product_id, roll_number, housing_type, housing_height, housing_radius.
     housing_depth is optional and will default to housing_height if not provided.
+    Timestamp is automatically added.
     """
     ensure_measured_housings_csv_exists()
     
@@ -481,9 +553,18 @@ def add_housing_measurement(entry: dict = Body(...)):
     pid = str(entry.get('product_id')).strip()
     if product_id_exists(pid, 'housing'):
         raise HTTPException(status_code=409, detail="product_id already exists for housing measurements")
+    
+    # Add timestamp to entry
+    entry["timestamp"] = datetime.datetime.now().isoformat()
+    
     from csv_helper import append_csv
     append_csv(get_measured_housings_path(), [entry], HOUSING_MEASUREMENT_FIELDS)
-    return {"status": "housing measurement added", "product_id": pid}
+    
+    return {
+        "status": "housing measurement added", 
+        "product_id": pid,
+        "timestamp": entry["timestamp"]
+    }
 
 @app.get("/shaft_measurement")
 def get_shaft_measurements():
@@ -496,27 +577,35 @@ def get_shaft_measurements():
 @app.put("/shaft_measurement")
 def update_shaft_measurement(entry: dict = Body(...)):
     """
-    Update a shaft measurement by part_number. Expects a JSON body with part_number and any fields to update.
+    Update a shaft measurement by product_id. Expects a JSON body with product_id and any fields to update.
+    Updates timestamp automatically when measurement is modified.
     """
     ensure_measured_shafts_csv_exists()
-    if "part_number" not in entry:
-        raise HTTPException(status_code=400, detail="Missing field: part_number")
+    if "product_id" not in entry:
+        raise HTTPException(status_code=400, detail="Missing field: product_id")
 
     entries = read_csv(get_measured_shafts_path())
     updated = False
     for row in entries:
-        if row["part_number"] == entry["part_number"]:
+        if row["product_id"] == entry["product_id"]:
+            # Update timestamp when measurement is modified
+            entry["timestamp"] = datetime.datetime.now().isoformat()
+            
             for field in SHAFT_MEASUREMENT_FIELDS:
-                if field in entry and field != "part_number":
+                if field in entry and field != "product_id":
                     row[field] = entry[field]
             updated = True
             break
 
     if not updated:
-        raise HTTPException(status_code=404, detail="Entry with given part_number not found")
+        raise HTTPException(status_code=404, detail="Entry with given product_id not found")
 
     write_csv(get_measured_shafts_path(), entries, SHAFT_MEASUREMENT_FIELDS)
-    return {"status": "shaft measurement updated"}
+    return {
+        "status": "shaft measurement updated",
+        "product_id": entry["product_id"],
+        "timestamp": entry["timestamp"]
+    }
 
 @app.delete("/shaft_measurement")
 def delete_shaft_measurements():
