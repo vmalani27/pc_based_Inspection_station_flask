@@ -400,7 +400,7 @@ def ensure_user_entry_csv_exists():
 
 # Shaft measurement fields and CSV path
 SHAFT_MEASUREMENT_FIELDS = ["product_id", "roll_number", "shaft_height", "shaft_radius", "timestamp"]
-HOUSING_MEASUREMENT_FIELDS = ["product_id", "roll_number", "housing_type", "housing_height", "housing_radius", "housing_depth", "timestamp"]
+HOUSING_MEASUREMENT_FIELDS = ["product_id", "roll_number", "housing_type", "housing_height", "housing_radius", "timestamp"]
 
 
 def get_measured_shafts_path():
@@ -529,20 +529,18 @@ def add_shaft_measurement(entry: dict = Body(...)):
 def add_housing_measurement(entry: dict = Body(...)):
     """
     Add a new housing measurement. Expects a JSON body with product_id, roll_number, housing_type, housing_height, housing_radius.
-    housing_depth is optional and will default to housing_height if not provided.
+    # housing_depth removed; only housing_height and housing_radius are used.
     Timestamp is automatically added.
     """
     ensure_measured_housings_csv_exists()
     
-    # Required fields (housing_depth is optional)
+    # Required fields (housing_height and housing_radius)
     required_fields = ["product_id", "roll_number", "housing_type", "housing_height", "housing_radius"]
     for field in required_fields:
         if field not in entry:
             raise HTTPException(status_code=400, detail=f"Missing field: {field}")
     
-    # Set housing_depth to housing_height if not provided
-    if "housing_depth" not in entry:
-        entry["housing_depth"] = entry["housing_height"]
+    # housing_depth logic removed
     
     # Validate housing_type value
     valid_housing_types = ["housing", "oval", "sqaure", "angular"]
