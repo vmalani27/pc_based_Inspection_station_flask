@@ -78,6 +78,82 @@ class UserEntry(db.Model):
     time = db.Column(db.Time, nullable=False)
     last_login = db.Column(db.DateTime)
 
+class UserSession(db.Model):
+    __tablename__ = 'user_sessions'
+    session_id = db.Column(db.String(36), primary_key=True)
+    roll_number = db.Column(db.String(50), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    status = db.Column(db.String(32), default='pending_calibration')
+    calibration_required = db.Column(db.Boolean, default=True)
+
+    def to_dict(self):
+        return {
+            "session_id": self.session_id,
+            "roll_number": self.roll_number,
+            "name": self.name,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "status": self.status,
+            "calibration_required": self.calibration_required
+        }
+
+# --- Persistent session helpers ---
+import uuid
+def create_user_session(roll_number: str, name: str, should_calibrate: bool):
+    session_id = str(uuid.uuid4())
+    with app_flask.app_context():
+        session = UserSession(
+            session_id=session_id,
+            roll_number=roll_number,
+            name=name,
+            status='pending_calibration',
+            calibration_required=should_calibrate,
+            created_at=datetime.datetime.utcnow()
+        )
+        db.session.add(session)
+        db.session.commit()
+        
+        # Create a dictionary from the session before returning to avoid DetachedInstanceError
+        session_dict = {
+            "session_id": session.session_id,
+            "roll_number": session.roll_number,
+            "name": session.name,
+            "created_at": session.created_at.isoformat() if session.created_at else None,
+            "status": session.status,
+            "calibration_required": session.calibration_required
+        }
+        return session_dict
+
+def get_user_session(session_id: str):
+    with app_flask.app_context():
+        session = UserSession.query.filter_by(session_id=session_id).first()
+        if session:
+            # Convert to dictionary before returning to avoid DetachedInstanceError
+            return {
+                "session_id": session.session_id,
+                "roll_number": session.roll_number,
+                "name": session.name,
+                "created_at": session.created_at.isoformat() if session.created_at else None,
+                "status": session.status,
+                "calibration_required": session.calibration_required
+            }
+        return None
+
+def complete_user_session(session_id: str):
+    with app_flask.app_context():
+        session = UserSession.query.filter_by(session_id=session_id).first()
+        if session:
+            session.status = 'calibrated'
+            db.session.commit()
+            return True
+        return False
+
+def cleanup_expired_sessions():
+    # Optional: delete sessions older than 2 days
+    with app_flask.app_context():
+        cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=2)
+        UserSession.query.filter(UserSession.created_at < cutoff).delete()
+        db.session.commit()
 
 class MeasuredShaft(db.Model):
     __tablename__ = 'measured_shafts'
@@ -102,6 +178,11 @@ class MeasuredHousing(db.Model):
     timestamp = db.Column(db.DateTime)
 
 
+with app_flask.app_context():  # Ensure tables exist (harmless if already created)
+    try:
+        db.create_all()
+    except Exception:
+        pass
 with app_flask.app_context():  # Ensure tables exist (harmless if already created)
     try:
         db.create_all()
@@ -730,56 +811,57 @@ def add_user_entry(entry: dict = Body(...)):
     with app_flask.app_context():
         existing = UserEntry.query.filter_by(roll_number=roll_number).first()
         user_status = "welcome_back" if existing else "new_user"
-    session = create_user_session(roll_number=roll_number, name=name, should_calibrate=should_calibrate_flag)
-    return {
-        "session_id": session.session_id,
+    session_data = create_user_session(roll_number=roll_number, name=name, should_calibrate=should_calibrate_flag)
+    # session_data is already a dictionary returned from create_user_session
+    session_data.update({
         "status": user_status,
         "should_calibrate": should_calibrate_flag,
         "message": "Session created. Complete calibration to finalize entry."
-    }
+    })
+    return session_data
 
 
 @app.post("/user_entry/complete_calibration")
 def complete_calibration(data: dict = Body(...)):
     if "session_id" not in data:
         raise HTTPException(status_code=400, detail="Missing session_id")
-    session = get_user_session(data["session_id"])
-    if not session:
+    session_data = get_user_session(data["session_id"])
+    if not session_data:
         raise HTTPException(status_code=404, detail="Session not found or expired")
-    if session.status == "calibrated":
+    if session_data["status"] == "calibrated":
         return {"status": "already_completed", "message": "Calibration already completed"}
     with app_flask.app_context():
         now = datetime.datetime.now()
-        user = UserEntry.query.filter_by(roll_number=session.roll_number).first()
+        user = UserEntry.query.filter_by(roll_number=session_data["roll_number"]).first()
         if user:
             user.last_login = now
             user.date = now.date()
             user.time = now.time()
         else:
             user = UserEntry(
-                roll_number=session.roll_number,
-                name=session.name,
+                roll_number=session_data["roll_number"],
+                name=session_data["name"],
                 date=now.date(),
                 time=now.time(),
                 last_login=now
             )
             db.session.add(user)
         db.session.commit()
-    complete_user_session(session.session_id)
+    complete_user_session(session_data["session_id"])
     return {
         "status": "calibration_completed",
-        "roll_number": session.roll_number,
-        "name": session.name,
+        "roll_number": session_data["roll_number"],
+        "name": session_data["name"],
         "message": "User entry finalized successfully"
     }
 
 
 @app.get("/user_entry/session/{session_id}")
 def get_session_status(session_id: str):
-    session = get_user_session(session_id)
-    if not session:
+    session_data = get_user_session(session_id)
+    if not session_data:
         raise HTTPException(status_code=404, detail="Session not found or expired")
-    return session.to_dict()
+    return session_data
 
 
 @app.put("/user_entry")
