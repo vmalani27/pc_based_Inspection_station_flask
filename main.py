@@ -49,8 +49,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+
+# --- DATABASE_URL/SQLALCHEMY_DATABASE_URI setup ---
+# If running on Heroku, DATABASE_URL is set automatically.
+# For local dev, you can set DATABASE_URL or SQLALCHEMY_DATABASE_URI in your shell or .env file.
+# Example (PowerShell):
+#   $env:DATABASE_URL="postgresql://username:password@localhost:5432/yourdb"
+# The code below will use SQLALCHEMY_DATABASE_URI if set, otherwise fallback to DATABASE_URL.
 app_flask = Flask(__name__)
-app_flask.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
+_raw_db_url = os.getenv('SQLALCHEMY_DATABASE_URI') or os.getenv('DATABASE_URL')
+if _raw_db_url and _raw_db_url.startswith('postgres://'):
+    _raw_db_url = _raw_db_url.replace('postgres://', 'postgresql://', 1)
+app_flask.config['SQLALCHEMY_DATABASE_URI'] = _raw_db_url
+app_flask.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app_flask)
 
 
