@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
 db = SQLAlchemy(app)
 
 # Example schema: UserEntry, MeasuredHousing, MeasuredShaft
@@ -39,5 +39,6 @@ class MeasuredShaft(db.Model):
 
 if __name__ == '__main__':
     print('Creating all tables in the database...')
-    db.create_all()
+    with app.app_context():
+        db.create_all()
     print('Database schema created successfully.')

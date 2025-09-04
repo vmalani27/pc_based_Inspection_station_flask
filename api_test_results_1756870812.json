@@ -1,0 +1,290 @@
+{
+  "summary": {
+    "total_tests": 40,
+    "passed_tests": 40,
+    "failed_tests": 0,
+    "success_rate": "100.0%"
+  },
+  "detailed_results": [
+    {
+      "endpoint": "/",
+      "test_case": "Root endpoint check",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:19"
+    },
+    {
+      "endpoint": "/housing_types",
+      "test_case": "Get housing types",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:19"
+    },
+    {
+      "endpoint": "/video/list/housing",
+      "test_case": "List videos housing",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:19"
+    },
+    {
+      "endpoint": "/video/list/shaft",
+      "test_case": "List videos shaft",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:19"
+    },
+    {
+      "endpoint": "/video/list/oval_housing",
+      "test_case": "List videos oval_housing",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:19"
+    },
+    {
+      "endpoint": "/video/list/sqaure_housing",
+      "test_case": "List videos sqaure_housing",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:19"
+    },
+    {
+      "endpoint": "/video/list/angular_housing",
+      "test_case": "List videos angular_housing",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:19"
+    },
+    {
+      "endpoint": "/video/list/invalid",
+      "test_case": "Invalid category",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:19"
+    },
+    {
+      "endpoint": "/video/housing_types/oval",
+      "test_case": "Housing videos",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:19"
+    },
+    {
+      "endpoint": "/video/housing_types/sqaure",
+      "test_case": "Housing videos",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:19"
+    },
+    {
+      "endpoint": "/video/housing_types/angular",
+      "test_case": "Housing videos",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:19"
+    },
+    {
+      "endpoint": "/video/housing_types/invalid",
+      "test_case": "Invalid housing type",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:19"
+    },
+    {
+      "endpoint": "/product_exists",
+      "test_case": "Non-existent shaft",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:21"
+    },
+    {
+      "endpoint": "/product_exists",
+      "test_case": "Non-existent housing",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:22"
+    },
+    {
+      "endpoint": "/product_exists",
+      "test_case": "Missing params",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:22"
+    },
+    {
+      "endpoint": "/product_exists",
+      "test_case": "Invalid measurement type",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:22"
+    },
+    {
+      "endpoint": "/shaft_measurement",
+      "test_case": "Valid shaft",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:24"
+    },
+    {
+      "endpoint": "/shaft_measurement",
+      "test_case": "Duplicate pid",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:25"
+    },
+    {
+      "endpoint": "/shaft_measurement",
+      "test_case": "Missing fields",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:25"
+    },
+    {
+      "endpoint": "/housing_measurement",
+      "test_case": "Valid housing",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:29"
+    },
+    {
+      "endpoint": "/housing_measurement",
+      "test_case": "Valid oval",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:31"
+    },
+    {
+      "endpoint": "/housing_measurement",
+      "test_case": "Valid sqaure",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:33"
+    },
+    {
+      "endpoint": "/housing_measurement",
+      "test_case": "Valid angular",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:35"
+    },
+    {
+      "endpoint": "/housing_measurement",
+      "test_case": "Duplicate pid",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:36"
+    },
+    {
+      "endpoint": "/housing_measurement",
+      "test_case": "Invalid type",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:36"
+    },
+    {
+      "endpoint": "/housing_measurement",
+      "test_case": "Missing housing_type",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:36"
+    },
+    {
+      "endpoint": "/measured_units/{roll_number}",
+      "test_case": "Existing roll",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:37"
+    },
+    {
+      "endpoint": "/measured_units/{roll_number}",
+      "test_case": "Non-existent roll",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:39"
+    },
+    {
+      "endpoint": "/db/schema/tables",
+      "test_case": "List tables",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:40"
+    },
+    {
+      "endpoint": "/db/schema/tables/{table}",
+      "test_case": "Describe measured_housings",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:45"
+    },
+    {
+      "endpoint": "/shaft_measurement",
+      "test_case": "Insert shaft generic",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:48"
+    },
+    {
+      "endpoint": "/db/query/select",
+      "test_case": "Select shaft",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:51"
+    },
+    {
+      "endpoint": "/db/query/update",
+      "test_case": "Update shaft",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:56"
+    },
+    {
+      "endpoint": "/db/query/select",
+      "test_case": "Confirm shaft update",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:09:59"
+    },
+    {
+      "endpoint": "/housing_measurement",
+      "test_case": "Insert housing generic",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:10:01"
+    },
+    {
+      "endpoint": "/db/query/select",
+      "test_case": "Select housing",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:10:04"
+    },
+    {
+      "endpoint": "/db/query/update",
+      "test_case": "Update housing",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:10:09"
+    },
+    {
+      "endpoint": "/db/query/select",
+      "test_case": "Confirm housing update",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:10:12"
+    },
+    {
+      "endpoint": "/video/{category}/{filename}",
+      "test_case": "HEAD request",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:10:12"
+    },
+    {
+      "endpoint": "/video/{category}/{filename}",
+      "test_case": "Invalid category",
+      "status": "PASS",
+      "details": "",
+      "timestamp": "2025-09-03 09:10:12"
+    }
+  ]
+}

@@ -133,43 +133,39 @@ python main.py
 
 ## Database Schema
 
-### UserEntry
+
+### user_entry
 ```sql
-CREATE TABLE user_entries (
-    id SERIAL PRIMARY KEY,
-    roll_number VARCHAR,
-    name VARCHAR,
-    date VARCHAR,
-    time VARCHAR,
-    created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE user_entry (
+  id SERIAL PRIMARY KEY,
+  roll_number VARCHAR NOT NULL,
+  name VARCHAR NOT NULL,
+  date DATE NOT NULL,
+  time TIME NOT NULL,
+  last_login TIMESTAMP
 );
 ```
 
-### ShaftMeasurement
+### measured_shafts
 ```sql
-CREATE TABLE shaft_measurements (
-    id SERIAL PRIMARY KEY,
-    product_id VARCHAR UNIQUE,
-    roll_number VARCHAR,
-    shaft_height FLOAT,
-    shaft_radius FLOAT,
-    measurement_timestamp TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE measured_shafts (
+  id SERIAL PRIMARY KEY,
+  product_id VARCHAR NOT NULL,
+  roll_number VARCHAR NOT NULL,
+  shaft_height FLOAT,
+  shaft_radius FLOAT,
+  timestamp TIMESTAMP
 );
 ```
 
-### HousingMeasurement
+### measured_housings
 ```sql
-CREATE TABLE housing_measurements (
-    id SERIAL PRIMARY KEY,
-    product_id VARCHAR UNIQUE,
-    roll_number VARCHAR,
-    housing_type VARCHAR,
-    depth FLOAT,
-    radius FLOAT,
-    height FLOAT,
-    measurement_timestamp TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW()
+CREATE TABLE measured_housings (
+  id SERIAL PRIMARY KEY,
+  product_id VARCHAR NOT NULL,
+  roll_number VARCHAR NOT NULL,
+  housing_radius FLOAT,
+  timestamp TIMESTAMP
 );
 ```
 
